@@ -12,7 +12,9 @@ class Settings(BaseSettings):
     )
 
     app_name: str = "FinSight"
-    app_env: str = "dev"
+    app_env: str = "development"
+    api_host: str = "0.0.0.0"
+    api_port: int = 8000
 
     postgres_host: str = "localhost"
     postgres_port: int = 5432
