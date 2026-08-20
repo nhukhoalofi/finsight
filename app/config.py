@@ -25,8 +25,7 @@ class Settings(BaseSettings):
 
     qdrant_url: str = "http://localhost:6333"
 
-    financebench_path: Path = Path(r"data\raw\financebench")
-
+    financebench_path: Path = Path("data/raw/financebench")
     @property
     def postgres_dsn(self) -> URL:
         return URL.create(

@@ -26,14 +26,22 @@ def chunk_pages(
     metadata: dict[str, Any],
     config: ChunkingConfig = DEFAULT_CHUNKING_CONFIG,
 ) -> list[DocumentChunk]:
-    if config.target_size <= 0 or config.hard_limit < config.target_size:
-        raise ValueError("Chunking limits must be positive and hard_limit >= target_size")
+    if config.target_size <= 0:
+        raise ValueError("target_size must be positive")
+    if config.overlap < 0:
+        raise ValueError("overlap must be non-negative")
+    if config.overlap >= config.target_size:
+        raise ValueError("overlap must be smaller than target_size")
+    if config.hard_limit < config.target_size:
+        raise ValueError("hard_limit must be >= target_size")
+
+    step = config.target_size - config.overlap
     chunks: list[DocumentChunk] = []
     for page in pages:
         words = page.text.split()
         start = 0
         while start < len(words):
-            part = words[start : start + config.hard_limit]
+            part = words[start : start + config.target_size]
             text = " ".join(part).strip()
             if text:
                 ordinal = len(chunks)
@@ -42,7 +50,7 @@ def chunk_pages(
                     document_id=document_id, text=text, source_name=source_name,
                     page=page.page_number, ordinal=ordinal, content_hash=content_hash(text), metadata=metadata,
                 ))
-            if start + config.hard_limit >= len(words):
+            if start + config.target_size >= len(words):
                 break
-            start += config.target_size - config.overlap
+            start += step
     return chunks

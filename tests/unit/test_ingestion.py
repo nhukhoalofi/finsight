@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from app.ingestion import indexer
 from app.ingestion.chunker import ChunkingConfig, chunk_pages
 from app.ingestion.cleaner import clean_text
@@ -45,7 +47,27 @@ def test_chunking_is_stable_nonempty_and_bounded() -> None:
     second = chunk_pages(pages, "document", "sample.pdf", {}, config)
     assert [chunk.chunk_id for chunk in first] == [chunk.chunk_id for chunk in second]
     assert [chunk.ordinal for chunk in first] == list(range(len(first)))
-    assert all(chunk.text.strip() and len(chunk.text.split()) <= 10 for chunk in first)
+    assert all(chunk.text.strip() and len(chunk.text.split()) <= 8 for chunk in first)
+    assert first[0].text.split() == [f"word{i}" for i in range(8)]
+    assert second[1].text.split()[:2] == ["word6", "word7"]
+
+
+@pytest.mark.parametrize(
+    "config, message",
+    [
+        (ChunkingConfig(target_size=0), "target_size must be positive"),
+        (ChunkingConfig(target_size=8, overlap=-1), "overlap must be non-negative"),
+        (ChunkingConfig(target_size=8, overlap=8), "overlap must be smaller than target_size"),
+        (ChunkingConfig(target_size=8, overlap=9), "overlap must be smaller than target_size"),
+        (
+            ChunkingConfig(target_size=8, overlap=2, hard_limit=7),
+            "hard_limit must be >= target_size",
+        ),
+    ],
+)
+def test_chunking_rejects_invalid_config(config: ChunkingConfig, message: str) -> None:
+    with pytest.raises(ValueError, match=message):
+        chunk_pages([ParsedPage(page_number=1, text="one two")], "document", "sample.pdf", {}, config)
 
 
 def test_content_hash_changes_with_content() -> None:
