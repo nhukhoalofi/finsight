@@ -2,6 +2,7 @@ from functools import lru_cache
 from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy import URL
 
 
 class Settings(BaseSettings):
@@ -24,19 +25,18 @@ class Settings(BaseSettings):
 
     qdrant_url: str = "http://localhost:6333"
 
-    financebench_path: Path = Path(r"C:\DUT\workspace\financebench")
+    financebench_path: Path = Path(r"data\raw\financebench")
 
     @property
-    def postgres_dsn(self) -> str:
-        return (
-            "postgresql+asyncpg://"
-            f"{self.postgres_user}:"
-            f"{self.postgres_password}@"
-            f"{self.postgres_host}:"
-            f"{self.postgres_port}/"
-            f"{self.postgres_db}"
+    def postgres_dsn(self) -> URL:
+        return URL.create(
+            drivername="postgresql+asyncpg",
+            username=self.postgres_user,
+            password=self.postgres_password,
+            host=self.postgres_host,
+            port=self.postgres_port,
+            database=self.postgres_db,
         )
-
 
 @lru_cache
 def get_settings() -> Settings:
