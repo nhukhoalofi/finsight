@@ -7,6 +7,7 @@ from app.ingestion.metadata import DocumentChunk
 from evaluation.datasets.corpus import (
     load_frozen_corpus_chunks,
     load_retrieval_corpus_manifest,
+    validate_cases_reference_chunks,
     validate_cases_reference_corpus,
 )
 from evaluation.datasets.retrieval import RetrievalEvalCase
@@ -76,3 +77,50 @@ def test_golden_cases_must_reference_manifest_documents(tmp_path: Path) -> None:
     )
     with pytest.raises(ValueError, match="Golden cases absent from corpus manifest: beta"):
         validate_cases_reference_corpus([case], load_retrieval_corpus_manifest(manifest_path))
+
+
+def test_golden_relevant_chunks_exist_and_belong_to_case_source(tmp_path: Path) -> None:
+    corpus = tmp_path / "corpus"
+    corpus.mkdir()
+    write_chunk(corpus / "alpha.jsonl", "alpha", "alpha-chunk")
+    chunks = load_frozen_corpus_chunks(corpus, load_retrieval_corpus_manifest(_manifest(tmp_path, ["alpha"])))
+    case = RetrievalEvalCase(
+        id="case",
+        question="question",
+        source_name="alpha",
+        evidence_pages=[1],
+        relevant_chunk_ids=["alpha-chunk"],
+    )
+    validate_cases_reference_chunks([case], chunks)
+
+
+def test_golden_relevant_chunk_validation_rejects_missing_or_wrong_source(tmp_path: Path) -> None:
+    corpus = tmp_path / "corpus"
+    corpus.mkdir()
+    write_chunk(corpus / "alpha.jsonl", "alpha", "alpha-chunk")
+    chunks = load_frozen_corpus_chunks(corpus, load_retrieval_corpus_manifest(_manifest(tmp_path, ["alpha"])))
+    missing = RetrievalEvalCase(
+        id="missing-case",
+        question="question",
+        source_name="alpha",
+        evidence_pages=[1],
+        relevant_chunk_ids=["missing-chunk"],
+    )
+    with pytest.raises(ValueError, match="Missing relevant chunk ids for missing-case: missing-chunk"):
+        validate_cases_reference_chunks([missing], chunks)
+
+    wrong_source = RetrievalEvalCase(
+        id="wrong-source-case",
+        question="question",
+        source_name="beta",
+        evidence_pages=[1],
+        relevant_chunk_ids=["alpha-chunk"],
+    )
+    with pytest.raises(ValueError, match="Relevant chunk alpha-chunk belongs to alpha but expected beta"):
+        validate_cases_reference_chunks([wrong_source], chunks)
+
+
+def _manifest(tmp_path: Path, sources: list[str]) -> Path:
+    path = tmp_path / "manifest.json"
+    write_manifest(path, sources)
+    return path

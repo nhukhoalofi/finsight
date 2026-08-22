@@ -56,3 +56,21 @@ def validate_cases_reference_corpus(
     missing = sorted({case.source_name for case in cases} - available)
     if missing:
         raise ValueError("Golden cases absent from corpus manifest: " + ", ".join(missing))
+
+
+def validate_cases_reference_chunks(
+    cases: list[RetrievalEvalCase], chunks: list[DocumentChunk]
+) -> None:
+    """Ensure frozen golden relevance IDs exist and belong to their source document."""
+    chunks_by_id = {chunk.chunk_id: chunk for chunk in chunks}
+    for case in cases:
+        missing = sorted(chunk_id for chunk_id in case.relevant_chunk_ids if chunk_id not in chunks_by_id)
+        if missing:
+            raise ValueError(f"Missing relevant chunk ids for {case.id}: " + ", ".join(missing))
+        for chunk_id in case.relevant_chunk_ids:
+            actual_source = Path(chunks_by_id[chunk_id].source_name).stem
+            if actual_source != case.source_name:
+                raise ValueError(
+                    f"Relevant chunk {chunk_id} belongs to {actual_source} "
+                    f"but expected {case.source_name}"
+                )

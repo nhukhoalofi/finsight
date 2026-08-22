@@ -8,6 +8,7 @@ from app.retrieval.sparse import BM25Retriever
 from evaluation.datasets.corpus import (
     load_frozen_corpus_chunks,
     load_retrieval_corpus_manifest,
+    validate_cases_reference_chunks,
     validate_cases_reference_corpus,
 )
 from evaluation.datasets.retrieval import load_retrieval_eval_cases
@@ -36,6 +37,7 @@ def main() -> None:
     corpus_manifest = load_retrieval_corpus_manifest(args.corpus_manifest)
     validate_cases_reference_corpus(cases, corpus_manifest)
     chunks = load_frozen_corpus_chunks(args.corpus, corpus_manifest)
+    validate_cases_reference_chunks(cases, chunks)
     retriever = BM25Retriever(chunks)
     evaluation = evaluate_retriever(cases, retriever, top_k=args.top_k)
     report = build_retrieval_report(

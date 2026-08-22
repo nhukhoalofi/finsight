@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from app.retrieval.types import RetrievalHit
 from evaluation.datasets.retrieval import RetrievalEvalCase
 from evaluation.reporting import build_retrieval_report, write_retrieval_report
@@ -65,6 +67,11 @@ def test_evaluator_metrics_and_ordering() -> None:
     assert evaluation.summary.recall_at_5 == 1 / 3
     assert evaluation.summary.recall_at_10 == 2 / 3
     assert evaluation.summary.mrr == (1 + 1 / 6) / 3
+
+
+def test_evaluator_rejects_top_k_below_ten() -> None:
+    with pytest.raises(ValueError, match="top_k must be >= 10 because evaluation reports Recall@10"):
+        evaluate_retriever([case("q", ["a"])], FakeRetriever({"q": [hit("a", 1)]}), top_k=5)
 
 
 def test_report_serialization_contains_identity_rankings_and_parameters(tmp_path: Path) -> None:

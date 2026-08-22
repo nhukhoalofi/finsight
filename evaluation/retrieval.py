@@ -59,6 +59,8 @@ def evaluate_retriever(
     top_k: int = 10,
 ) -> RetrievalEvaluation:
     """Evaluate a public retriever interface using question text only."""
+    if top_k < 10:
+        raise ValueError("top_k must be >= 10 because evaluation reports Recall@10")
     results: list[RetrievalQueryResult] = []
     for case in cases:
         started = time.perf_counter()
